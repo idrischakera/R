@@ -1,0 +1,8 @@
+1. Reading all csv files from a folder
+pathVector <- list.files(path= "C:/Users/u23e20/Downloads/",pattern = ".csv") 
+# list.files fetches all files that match the filetype you specify in pattern argument and stores them in a character vector
+dataframeList <- lapply(pathVector,read.csv)
+
+2. to rbind dataframes with different number of columns
+library(gtools)
+smartbind(df1,df2)

@@ -1,0 +1,5 @@
+#plotting a hisogram with x labels rotated by 90 degrees for more space to see them
+ggplot(mammals,aes(x=as.factor(name),y=body))+geom_histogram(stat = "identity")+theme(axis.text.x = element_text(angle = 90))
+
+if you're using simple plot function, simply use the lab and las arguments for the same
+

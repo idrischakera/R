@@ -1,0 +1,3 @@
+1. strsplit(x,split = ":") function
+Takes 2 arguments, a sting and a character, and splits the string on that character
+returns a list
