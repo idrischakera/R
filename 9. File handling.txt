@@ -7,4 +7,3 @@ dataframeList <- lapply(pathVector,read.csv)
 library(gtools)
 smartbind(df1,df2)
 
-dfjsiodfoifdsj
