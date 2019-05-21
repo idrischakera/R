@@ -27,11 +27,18 @@ histograms : describe the ditribution of a 1-D numerical variable
 Box plots: compare the distribution of a numeric variable among several categories
 
 
+# Barplots
+p+geom_col() # x should be a categorical variable and y should be a numeric inside the aes() function of ggplot()
 
+# Histogram
+p+geom_histogram(binwidth=5) # takes only one variable x, and binwidth denotes the class size for each bin
++scale_x_log10() might be useful in some cases
 
+# Boxplot
+p+geom_boxplot() # the x variable should be categorical, and y should be numeric, whose distribution we want to study
 
-
-
+# Adding title to our plot
+p+ ggtitle("Your title")
 
 
 

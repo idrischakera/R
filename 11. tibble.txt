@@ -1,0 +1,11 @@
+tibble is a special type of dataframe(more optimised) 
+(dataset used here is hflights)
+
+# Converting a dataframe into a tibble
+hflights <- tbl_df(hflights)
+
+#converting a tibble back to a dataframe
+as.data.frame(hflights)
+
+#shows datatype and intial values of each variable in the tibble
+glimpse(hflights)
