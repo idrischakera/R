@@ -1,0 +1,77 @@
+
+# filter in dplyr
+used to access particular rows in a dataset
+used with pipe function (%>%)
+example :
+gapminder %>% filter(year==2007)
+gapminder %>% filter(country=="United States",year == 2007) # filters observations where both conditions are true
+
+
+# arrange in dplyr
+used to arrange whole dataset according to a particular row in a dataset
+used with pipe function (%>%)
+example :
+gapminder %>% arrange(year)
+gapminder %>% arrange(desc(year)) # descending order
+If you give 2 column names in arrange, it will group by first variable, and for each value of the first variable, sort the dataframe according to the second variable
+for example in hflights, 
+arrange(dtc,UniqueCarrier,DepDelay) 
+
+# using filter with arrange
+gapminder %>% filter(year ==2007) %>% arrange(gdpPercap) # this helps us in complex querying
+
+
+# mutate in dplyr
+changes or adds a new column(variable) based on other variables
+gapminder %>% mutate(pop = pop / 100)
+#To add new column, just mention the new column name in LHS of mutate
+gapminder %>%  mutate(gdp = gdpPercap * pop) 
+
+
+# complex queries using all the above verbs of dplyr
+gapminder %>% filter(year==2007) %>% mutate(gdp = gdpPercap * pop) %>% arrange(desc(gdp))
+
+
+# Summarize 
+used to find specific summaries(mean,sum, median,min, max etc.) in our data
+gapminder_1952 <- gapminder %>% filter(year==1952)
+gapminder_1952 %>% summarize(meanLifeExp = mean(lifeExp))
+or
+gapminder_1952 %>% summarize(meanLifeExp = mean(lifeExp) , totalPop = sum(pop)) 
+
+# Group by 
+what if you need to find the summary about each year in the dataset
+we replace the filter(year == 1952) by group_by(year)
+This helps us in finding summary for each year
+example:
+gapminder %>% group_by(year) %>% summarize(meanLifeExp = mean(lifeExp),totalPop=sum(pop))
+gapminder %>% group_by(continent,year) %>% summarize(medianLifeExp = median(lifeExp),maxGdpPercap= max(gdpPercap))
+
+#select in dplyr
+used to access particular columns in a dataset
+used with or without the pipe function %>%
+example :
+select(gapminder,year,continent,gdpPercap) #selects year, continent and gdpPercap in the gapminder dataset or tibble
+we can also select columns in a range
+select(hflights,Origin:Cancelled) # will return all columns in between those columns including them
+
+#dplyr comes with a set of helper functions that can help you select groups of variables inside a select() call:
+starts_with("X"): every name that starts with "X"
+ends_with("X"): every name that ends with "X"
+contains("X"): every name that contains "X"
+matches("X"): every name that matches "X", where "X" can be a regular expression
+num_range("x", 1:5): the variables named x01, x02, x03, x04 and x05
+one_of(x): every name that appears in x, which should be a character vector
+
+for example in hflights dataset, out of the 21 columns, 2 are ArrDelay and DepDelay
+select(hflights,ends_with("Delay"))
+ # returns those columns which end with 'delay'
+
+
+
+
+
+
+
+
+

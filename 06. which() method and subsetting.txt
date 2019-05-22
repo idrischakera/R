@@ -1,0 +1,4 @@
+which(education$Region == 2)
+input : Vector
+output : indexes on which the condition is true
+use it for accessing the database by providing column indexes after the which command
