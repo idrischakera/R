@@ -7,4 +7,5 @@ Hope this helps someone like me, trying to figure out the nuances of the Art of 
 Also, suggestions are more than welcome, at chakeraidris@gmail.com or www.linkedin.com/in/idrischakera , or maybe you can just drop a Hi :)
 
 Cheers!
+
 Idris
