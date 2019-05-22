@@ -9,3 +9,4 @@ as.data.frame(hflights)
 
 #shows datatype and intial values of each variable in the tibble
 glimpse(hflights)
+
