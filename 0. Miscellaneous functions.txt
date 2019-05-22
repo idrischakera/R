@@ -1,2 +1,0 @@
-1. Unique values of a variable
-unique(myvector) # returns unique values in that vector
