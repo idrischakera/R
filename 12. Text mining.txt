@@ -1,0 +1,17 @@
+regular expressions (regex)
+strings with special syntax
+allow us to match patterns in strings
+
+import re
+re.match('abc','abcde') # returns a match object of the matching characters in both strings
+
+1. '\w+' returns first word in the string
+	re.match('\w+','Hi there!') # matches the first word 'Hi'
+2. '\d' matches digits
+3. '\s' mathces spaces , '\S' matches no spaces(opposite of each other)
+4. '.' matches any letter or symbol
+5. '*' or '+' greedy match, matches pattern with the whole string
+6. [a-z] matches the group of characters inside the square bracket
+
+
+re.split('\s+','my name is') # returns a list containing all words split by spaces
