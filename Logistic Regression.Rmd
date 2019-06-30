@@ -1,0 +1,96 @@
+---
+
+title: "Logistic Regression"
+author: "Idris"
+date: "June 28, 2019"
+output: html_document
+---
+
+```{r warning=F,message=F,echo=F}
+library(ggplot2)
+library(tibble)
+library(dplyr)
+library(DataExplorer)
+library(DT)
+library(scales)
+library(plotly)
+library(rmarkdown)
+library(knitr)
+library(e1071)
+library(corrplot)
+library(prettydoc)
+library(cowplot)
+```
+
+##Loading the dataset and preparing it
+```{r}
+
+heart<-read.delim("C:/Users/hp/Desktop/EDA - statlog heart data/heart.dat",header = F,sep = " ")
+
+colnames(heart)<-c("age","sex","CPType","restBP","cholesterol","fastingBS_g120","restECG","maxHR","ExIndAngina","oldPeak","slopePEST","nVessels","thalD","HeartDisease")
+heart$slopePEST <- factor(heart$slopePEST,c(1,2,3),c("Up","Flat","Down"))
+heart$HeartDisease <- factor(heart$HeartDisease,c(1,2),c("No","Yes"))
+heart$thalD <- factor(heart$thalD,c(3,6,7),c("normal","fixed","reversible"))
+heart$nVessels <- factor(heart$nVessels)
+heart$ExIndAngina <- factor(heart$ExIndAngina,c(0,1),c("No","Yes"))
+heart$restECG <- factor(heart$restECG) #requires attention
+heart$fastingBS_g120 <- factor(heart$fastingBS_g120,c(0,1),c(F,T))
+heart$CPType <- factor(heart$CPType,c(1,2,3,4),c("Typical","Atypical","Non-Anginal","Asymptomatic"))
+heart$sex <- factor(heart$sex,levels=c(0,1),labels=c('F','M'))
+#datatable(heart) #glimpse
+
+
+
+#DT::datatable(heart, options = list(
+#  pageLength=5, scrollX='400px'), filter = 'top')
+#summarizeColumns(heart) %>% knitr::kable( caption =  'Glimpse ')
+```
+
+##Splitting the data
+```{r}
+sample_size <- floor(0.7*nrow(heart))
+set.seed(500)
+train_ind <- sample(seq_len(nrow(heart)),size = sample_size)
+train_set <- heart[train_ind,]
+test_set <- heart[-train_ind,]
+summary(train_set)
+summary(test_set)
+
+
+
+```
+
+##Logistic Regression
+###1. Using Gender as a predictor variable
+Let's see if sex (female/male) is a good predictor. But first, let's just look at the raw data:
+```{r}
+xtabs(~ HeartDisease + sex, data=train_set)
+```
+
+Applying Logistic regression between the target variable and the gender of the patient:
+
+```{r}
+#Using glm() function, which stands for Generalized Linear Models, in which we have chosen the binomial family, which does the logistic regression for us    
+logistic_gender <- glm(HeartDisease ~ sex, data=train_set, family="binomial")
+summary(logistic_gender)
+```
+
+```{r}
+logistic_full <- glm(HeartDisease ~ ., data=train_set, family="binomial")
+summary(logistic_full)
+```
+```{r}
+predicted.data <- data.frame(
+  probability.of.hd=logistic_full$fitted.values,
+  heart_disease=train_set$HeartDisease)
+ 
+predicted.data <- predicted.data[
+  order(predicted.data$probability.of.hd, decreasing=FALSE),]
+predicted.data$rank <- 1:nrow(predicted.data)
+
+ggplot(data=predicted.data, aes(x=rank, y=probability.of.hd)) +
+  geom_point(aes(color=heart_disease), alpha=1, shape=4, stroke=2) +
+  xlab("Index") +
+  ylab("Predicted probability of getting heart disease")
+```
+
