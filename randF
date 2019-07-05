@@ -1,0 +1,127 @@
+---
+title: "Random Forests"
+author: "Idris"
+date: "July 5, 2019"
+output: html_document
+---
+
+##Loading the dataset and preparing it
+```{r}
+heart<-read.delim("C:/Users/u23e20/Downloads/Phase 1 EDA - Statlog Heart Disease/heart.dat",header = F,sep = " ")
+colnames(heart)<-c("age","sex","CPType","restBP","cholesterol","fastingBS_g120","restECG","maxHR","ExIndAngina","oldPeak","slopePEST","nVessels","thalD","HeartDisease")
+heart$slopePEST <- factor(heart$slopePEST,c(1,2,3),c("Up","Flat","Down"))
+heart$HeartDisease <- factor(heart$HeartDisease,c(1,2),c("No","Yes"))
+heart$thalD <- factor(heart$thalD,c(3,6,7),c("normal","fixed","reversible"))
+heart$nVessels <- factor(heart$nVessels)
+heart$ExIndAngina <- factor(heart$ExIndAngina,c(0,1),c("No","Yes"))
+heart$restECG <- factor(heart$restECG) #requires attention
+heart$fastingBS_g120 <- factor(heart$fastingBS_g120,c(0,1),c(F,T))
+heart$CPType <- factor(heart$CPType,c(1,2,3,4),c("Typical","Atypical","Non-Anginal","Asymptomatic"))
+heart$sex <- factor(heart$sex,levels=c(0,1),labels=c('F','M'))
+
+```
+
+##Splitting the data
+```{r}
+sample_size <- floor(0.7*nrow(heart))
+set.seed(500)
+train_ind <- sample(seq_len(nrow(heart)),size = sample_size)
+train_set <- heart[train_ind,]
+test_set <- heart[-train_ind,]
+```
+
+###Checking the number of heart disease patients in each set
+
+```{r}
+#Training Set
+summary(train_set$HeartDisease)
+#Testing Set
+summary(test_set$HeartDisease)
+```
+
+
+```{r}
+library(randomForest)
+heart_rf=randomForest(HeartDisease ~ . , data = train_set)
+
+heart_rf
+```
+```{r}
+plot(heart_rf)
+```
+
+
+###Testing Accuracy
+```{r,warning=FALSE}
+library(caret)
+pred = predict(heart_rf, newdata=test_set)
+confusionMatrix(data=pred, test_set$HeartDisease)
+```
+
+
+
+```{r}
+library(randomForest)
+heart_rf1000=randomForest(HeartDisease ~ . , data = train_set,mtry=4)
+plot(heart_rf1000)
+heart_rf1000
+```
+
+```{r}
+#plot(heart_rf)
+```
+
+
+###Testing Accuracy
+```{r,warning=FALSE}
+library(caret)
+pred1 = predict(heart_rf1000, newdata=test_set)
+confusionMatrix(data=pred1, test_set$HeartDisease)
+```
+
+```{r}
+
+```
+ntree = 500
+mtry = 3
+OOB estimate of  error rate: 16.93%
+Test accuracy
+Kappa : 0.6  
+Sensitivity : 0.9524          
+Specificity : 0.6410 
+Balanced Accuracy : 0.7967
+
+
+ntree = 500
+mtry = 4
+OOB estimate of  error rate: 16.93%
+Test accuracy
+Kappa :0.6253
+Sensitivity : 0.9524          
+Specificity : 0.6667
+Balanced Accuracy :0.8095
+
+```{r}
+library(randomForest)
+
+accuracy<-c() 
+
+for 
+heart_rf1001=randomForest(HeartDisease ~ . , data = train_set,mtry=5)
+pred2 = predict(heart_rf1001, newdata=test_set)
+x<-confusionMatrix(data=pred2, test_set$HeartDisease)
+metric<-x$byClass
+accuracy<<-c(accuracy,metric[11])
+vector <- c(vector, v)
+```
+
+```{r}
+#plot(heart_rf)
+```
+
+
+###Testing Accuracy
+```{r,warning=FALSE}
+library(caret)
+
+```
