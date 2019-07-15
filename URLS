@@ -1,3 +1,20 @@
 Information gain and Entropy - https://medium.com/udacity/shannon-entropy-information-gain-and-picking-balls-from-buckets-5810d35d54b4
 
 time series forecasting - https://otexts.com/fpp2/
+
+mask RCNN - 
+
+https://github.com/matterport/Mask_RCNN
+https://engineering.matterport.com/splash-of-color-instance-segmentation-with-mask-r-cnn-and-tensorflow-7c761e238b46
+
+how to train your own dataset- 
+https://github.com/facebookresearch/maskrcnn-benchmark/issues/521
+
+mask rcnn 2.1
+https://github.com/matterport/Mask_RCNN/releases
+
+https://www.analyticsvidhya.com/blog/2018/07/building-mask-r-cnn-model-detecting-damage-cars-python/
+https://www.pyimagesearch.com/2018/11/19/mask-r-cnn-with-opencv/
+http://www.robots.ox.ac.uk/~vgg/software/via/via-1.0.6.html
+https://github.com/SUYEgit/Surgery-Robot-Detection-Segmentation
+
