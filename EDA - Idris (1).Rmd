@@ -1,0 +1,1067 @@
+---
+title: "EDA - Heart Disease Data"
+author: "by Idris Chakera"
+date: "May 24, 2019"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+---
+>Data is just a collection of numbers until you turn it into a story.
+
+<a id="Index"></a>
+
+##Table of Contents
+<ul>
+<li><a href="#About">About</a></li>
+
+<li><a href="#Structure">Structure</a></li>
+
+<li><a href="#Attribute_Description">Attribute Description</a></li>
+
+<li><a href="#Attribute_Summary">Attribute Summary</a></li>
+
+<li><a href="#Univariate">Univariate Analysis</a></li>
+
+<li><a href="#Univariate_Summary">Univariate Summary</a></li>
+
+<li><a href="#Bivariate">Bivariate Analysis</a></li>
+
+<li><a href="#Bivariate_Summary">Bivariate Summary</a></li>
+
+<li><a href="#Multivariate">Multivariate Analysis</a></li>
+
+<li><a href="#Conclusion">Conclusion</a></li>
+</ul>
+
+<a id="About"></a>
+
+##About
+
+
+<b>Cardiovascular diseases</b> are the number one cause of death globally, as more people die annually from Heart diseases than from any other cause. In 2016 alone, an estimated 17.9 million people died from heart diseases , representing 31% of all global deaths.
+
+Early detection of cardiac diseases and continuous supervision of patients can reduce this mortality rate. However, accurate detection of heart diseases in all cases and supervision of a patient 24*7 by a doctor is simply  not feasible due to the lack of speacialized doctors.
+
+The Statlog dataset is a Heart Disease Database that was dontated by the Cleaveland Clinic Foundation, Ohio in 1988 in the hope of encouraging people to come up with models that can predict heart disease. This dataset contains 13 attributes and a target variable, and the goal is to predict the presence or absence of heart disease in the patient(target variable).
+
+The original dataset had codes as the values for almost all of the attributes, which have been substitued by their meanings in the data preparation stage for a better intuition of the dataset. 
+
+So Let's have a glimpse at the dataset:
+
+```{r warning=F,message=F,echo=F}
+library(ggplot2)
+library(tibble)
+library(dplyr)
+library(DataExplorer)
+library(DT)
+library(scales)
+library(plotly)
+library(rmarkdown)
+library(knitr)
+library(e1071)
+library(corrplot)
+library(prettydoc)
+library(caret)
+```
+
+```{r,warning=FALSE,echo=F}
+
+heart<-read.delim("C:/Users/u23e20/Downloads/Phase 1 EDA - Statlog Heart Disease/heart.dat",header = F,sep = " ")
+
+colnames(heart)<-c("age","sex","CPType","restBP","cholesterol","fastingBS_g120","restECG","maxHR","ExIndAngina","oldPeak","slopePEST","nVessels","thalD","HeartDisease")
+heart$slopePEST <- factor(heart$slopePEST,c(1,2,3),c("Up","Flat","Down"))
+heart$HeartDisease <- factor(heart$HeartDisease,c(1,2),c("No","Yes"))
+heart$thalD <- factor(heart$thalD,c(3,6,7),c("normal","fixed","reversible"))
+heart$nVessels <- factor(heart$nVessels)
+heart$ExIndAngina <- factor(heart$ExIndAngina,c(0,1),c("No","Yes"))
+heart$restECG <- factor(heart$restECG) #requires attention
+heart$fastingBS_g120 <- factor(heart$fastingBS_g120,c(0,1),c(F,T))
+heart$CPType <- factor(heart$CPType,c(1,2,3,4),c("Typical","Atypical","Non-Anginal","Asymptomatic"))
+heart$sex <- factor(heart$sex,levels=c(0,1),labels=c('F','M'))
+#datatable(heart) #glimpse
+
+
+
+DT::datatable(heart, options = list(
+  pageLength=5, scrollX='400px'), filter = 'top')
+#summarizeColumns(heart) %>% knitr::kable( caption =  'Glimpse ')
+```
+
+Looks good, but what do these attributes and their values mean? And which attributes are more critical in determining the patient's heart condition?
+
+Let us dive a little bit deeper and understand the dataset.
+
+<a href="#Index">Back to Table of Contents</a>
+
+
+
+<a id="Structure"></a>
+
+##Structure of the Dataset
+```{r,echo=F}
+str(heart)
+```
+
+<a id="Attribute_Description"></a>
+
+##Attribute Description
+1. <b>Age:</b>  Age (in years) of the patient at the time of admission in the hospital
+
+2. <b>Sex:</b> Gender of the patient (Female/Male) 
+
+3.  <b>Chest Pain Type:</b> Broadly classified into typical angina, atypical angina, non-anginal pain  and asymptomatic pain.
+<ul>
+<li>Typical angina is the discomfort that may feel like a <b>tightness or heaviness in the central chest</b> that is noted when the heart does not get enough blood or oxygen.</li> 
+<li>Atypical chest pain is a term used to describe discomfort or pain centered in the chest that is not cardiac pain. It is not heart related and not of burning quality, and is rather a <b>sharp, knife-like and pulsating sensation.</b> </li>
+<li>Non-Anginal Pain can be attributed to Cervical root compression pain or esophageal spasm, which are the greatest <b>mimics of angina</b> since they can both be relieved by nitroglycerin but they have several features which help to rule out angina.</li>
+<li>Asymptomatic means neither causing nor exhibiting symptoms of disease. This is when the patient doesn't show symptoms of chest pain.</li> 
+</ul>
+
+4.  <b>Resting blood pressure:</b> Measured in mm Hg on admission to the hospital.
+<ul>
+<li>Readings over 120/80mm Hg and up to 139/89mm Hg are in the normal to high-normal range.</li> 
+<li>According to doctors, Blood pressure that's high over a long time is one of the main risk factors for heart disease.</li>
+</ul>
+
+5.  <b>Cholesterol:</b> Measured in mg/dL at the time of admission.
+<ul>
+<li>Total cholesterol levels less than 200 milligrams per deciliter (mg/dL) are considered desirable for adults.</li> 
+<li>A reading between 200 and 239 mg/dL is considered borderline high.</li> 
+<li>A reading of 240 mg/dL and above is considered high.</li>
+</ul>
+
+6.  <b>Fasting blood sugar:</b> Whether it is greater than 120 mg/dL (Yes/No)
+<ul>
+<li>A fasting blood sugar level less than 100 mg/dL (5.6 mmol/L) is normal.</li> 
+<li>A fasting blood sugar level from 100 to 125 mg/dL (5.6 to 6.9 mmol/L) is considered prediabetes.</li> 
+<li>If its higher than that on two separate tests, you have diabetes.</li>
+</ul>
+Over time, high blood glucose from diabetes can damage blood vessels and the nerves that control heart and blood vessels. The longer one has diabetes, the higher the chances that he/she will develop heart disease. In adults with diabetes, the most common causes of death are heart disease and stroke.
+
+7.  <b>Resting ECG Results:</b> An Electrocardiogram (ECG) is a medical test that detects heart problems by measuring the electrical activity generated by the heart as it contracts. In layman's terms, it is a Voltage Vs. Time graph for our heart. The results are  categorized into 3 types:
+<ul>
+<li>Normal(Code 0) results mean that the ECG curve matches that of a healthy heart because it has a characteristic shape.</li>
+<li>ST Wave Abnormality(Code 1) refers means there is a significant difference between the ECG's ST Segment and that of a healthy heart.</li>
+<li>Left ventricular hypertrophy(Code 2) is enlargement and thickening (hypertrophy) of the walls of your heart's main pumping chamber (left ventricle). Left ventricular hypertrophy can develop in response to some factor - such as high blood pressure or a heart condition - that causes the left ventricle to work harder.</li>
+</ul>
+8.  <b>Maximum heart Rate Achieved during exercise:</b> Measured in  beats per minute(bpm), the Maximum heart rate during excercise is the upper limit of what your cardiovascular system can handle during physical activity.
+
+9.  <b>Exercise induced angina:</b> Whether or not exercise induced chest pain in the patient (Yes/No). Everyone, including people in excellent shape, can experience pain in their chest during exercise. The many potential causes range from benign to potentially life-threatening. 
+
+10. <b>Oldpeak:</b> ST depression induced by exercise relative to rest. ST depression refers to a finding on an electrocardiogram, wherein the trace in the ST segment is abnormally low below the baseline. The ST segment represents the isoelectric period when the ventricles are in between depolarization and repolarization. The typical ST segment duration is usually around 80 ms.
+
+11. <b>SlopePEST:</b> Slope of the peak exercise ST segment curve(Upsloping/Downsloping/Flat). The ST segment represents the isoelectric period when the ventricles are in between depolarization and repolarization. The typical ST segment duration is usually around 80 ms.
+```{r,fig.align="center",echo=F}
+include_graphics("C:/Users/u23e20/Downloads/download.jpg",)
+```
+
+12. <b>nVessels:</b> Major vessels colored(0-3) during fluoroscopy. 
+
+13. <b>Thal:</b> A thallium stress test is a nuclear imaging test that shows how well blood flows into your heart while you're exercising or at rest, and is usually performed in a controlled, clinical environment. Results are - Normal blood flow/Fixed defect/Reversible defect
+
+14. <b>Heart Disease:</b> Target Variable (Yes or No)
+
+##Missing values in the dataset
+```{r,echo=F}
+
+sapply(heart, function(x) sum(is.na(x)))
+
+```
+Fortunately, No missing values are present in our dataset.
+
+<a href="#Index">Back to Table of Contents</a>
+
+<a id="Attribute_Summary"></a>
+
+##Attribute Summary
+```{r,echo=F}
+
+summary(heart)
+```
+1. <b>Age:</b>
+<ul>
+  <li>The range of patient's ages in our sample is from 29 to 77.</li>
+  <li>Only the first quartile has patients aging below 48 years, all the rest 75 percent of observations(patients) are above 48 years of age.</li>
+  <li>50 percent of the patients in our sample are aged between 48 and 61 years, which shows that generally, the observations lie close to our central value. </li>
+  <li>The average age of patients is 54.5 years and the median age is 55 years, which are pretty close.</li>
+</ul>
+
+2. <b>Gender:</b>
+<ul>
+  <li>The number of men in our sample is 183.</li>
+  <li>The number of women in our sample is 87, which is roughly half the number of men.</li>
+</ul>
+
+3.  <b>Chest Pain Type:</b>
+<ul>
+  <li>The most common type of chest pain reported by the patients is Asymptomatic, which is experienced by 129 patients.</li>
+  <li>Only 20 patients reported Typical Chest Pain.</li>
+  <li>Atypical and Non-anginal Pain was reported by 42 and 79 patients respectively.</li>
+</ul>
+
+4.  <b>Resting blood pressure:</b>
+<ul>
+  <li>The minimum Resting Blood Pressure in our sample is 94 mm Hg.</li>
+  <li>The maximum Resting Blood Pressure in our sample is 200 mm Hg.</li>
+    <li>The average Resting Blood Pressure of patients is 131 mm Hg, which is close to the median value of 130 mm Hg.</li>
+  <li>The Interquartile range(25 percentile to 75 percentile) concides with normal to high-normal range of Resting Blood pressure, which is 120-140 mm Hg.</li>
+</ul>
+
+5.  <b>Cholesterol:</b>
+<ul>
+  <li>The minimum blood cholesterol level in our sample is 126 mg/dL.</li>
+  <li>The maximum blood cholesterol level in our sample is 564 mg/dL.</li>
+  <li>Both the mean and median values, which are 250 and 245 mg/dL respectively, are much higher than the desired cholesterol levels in a healthy adult.</li>
+  <li>Only 25 percent of the patients have normal cholesterol (less than 213 mg/dL), all the remaining 75 percent of patients have high cholesterol.</li>
+</ul>
+
+6.  <b>Fasting blood sugar:</b>
+<ul>
+  <li>40 out of the 270 patients have their fasting blood sugar greater than 120 mg/dL.</li>
+  <li>The remaining 230 patients have their fasting blood sugar greater than 120 mg/dL.</li>
+</ul>
+
+7.  <b>Resting ECG Results:</b>
+<ul>
+  <li>137 out of the 270 patients were reported to have Left ventricular hypertrophy(Code 2).</li>
+  <li>131 patients had normal ECG results.</li>
+  <li>2 Patients were reported to have ST Wave Abnormality(Code 1).</li>
+</ul>
+
+8.  <b>Maximum heart Rate achieved during exercise:</b>
+<ul>
+  <li>The maximum heart Rate achieved by any patient of our sample was 202 Bpm.</li>
+  <li>Whereas the minimum heart Rate achieved during exercise in our sample was just 71 Bpm.</li>
+  <li>The average Heart rate during exercise in our sample was around 150 Bpm, whereas the median value was 153.5 Bpm.</li>
+</ul>
+
+9.  <b>Exercise induced angina:</b>
+<ul>
+  <li>181 patients didn't feel any chest pain during exercise.</li>
+  <li>Whereas 89 patients experienced exercise induced angina (Chest pain).</li>
+</ul>  
+
+10. <b>Oldpeak:</b>It is the ST depression induced by exercise relative to rest.
+<ul>
+  <li>The minimum value of this ratio is 0.</li>
+  <li>The maximum value is 6.20.</li>
+  <li>The average value is 1.05, whereas the median value is 0.80.</li>
+  <li> 25 percent of patients have  </li>
+</ul>
+
+11. <b>SlopePEST:</b>
+<ul>
+  <li>130 patients had upwards slope of their peak exercise ST segment.</li>
+  <li>Whereas 122 patients had a flat ST segment during peak exercise.</li>
+  <li>While 18 patients had a downwards slope of ST segment during peak exercise.</li>
+</ul>
+
+12. <b>nVessels:</b> Major vessels colored(0-3) during fluoroscopy
+<ul>
+  <li>160 patients had no major vessels colored during flouroscopy.</li>
+  <li>Whereas 58 patients showed coloration in one major blood vessel during flouroscopy.</li>
+  <li>While 33 and 19 patients showed coloration in two and three major blood vessels respectively during flouroscopy.</li>
+</ul>
+
+13. <b>Thal:</b> Thallium stress test results(Normal blood flow/Fixed defect/Reversible defect)
+<ul>
+  <li>152 patients had normal blood flow to the heart during the Thallium Stress Test.</li>
+  <li>Whereas 104 patients showed reversible defects in blood flow, i.e. which restored back to normal with rest.</li>
+  <li>While 14 patients either had fixed defects or developed fixed defects in blood flow to the heart after the Thallium Stress Test. </li>
+</ul>
+
+Let us now study each and attribute with plots and graphs, but first, lets have a look at the proportion of patients that had Heart disease and the proportion that didn't: 
+
+```{r echo=F}
+heart %>%
+  group_by(HeartDisease) %>%
+  summarize(count = n()) %>%
+  plot_ly(labels = c("No","Yes"), values = ~count) %>%
+  add_pie(hole = 0) %>%
+  layout(title = "Percentage of Patients having Heart Disease",  showlegend = T,
+         legend = list(font = list(size=20)),
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+```
+
+From above graph it is clear that more than half of the sample is not suffering from Heart Disease, with percentage of 55.6%. Whereas 44.4% of the patients actually have heart disease.
+
+Were there any telltale symptoms, or causes for these heart diseases?
+
+<b>Is there a way that one can accurately classify the patients based on the preliminary reports?</b>
+
+Let's explore the features to get insights from the dataset and answer the above questions.
+
+
+<a href="#Index">Back to Table of Contents</a>
+
+<a id="Univariate"></a>
+
+##Univariate Analysis
+Let us take each attribute of our dataset one by one and look further into their distributions rather than just looking at their summary statistics.
+
+###1. Age of Patients
+```{r ,echo=F}
+
+library(e1071)
+ggplot(heart,aes(x=age))+geom_histogram(binwidth = 5,fill="steelblue",color="black")+
+  theme_minimal()+scale_y_continuous(breaks=seq(0,70,by=10))+
+  xlab("Age (in years)")+ylab("Count")+
+  theme(axis.line = element_line(color = "black",size = 1, linetype = "solid"))+
+  geom_vline(aes(xintercept = mean(age, na.rm = T)),
+             colour = "red", linetype ="longdash", size = .8,)+scale_x_continuous(breaks = seq(25,80,by=5))+
+  ggtitle(paste("Skewness = ",round(skewness(heart$age),2)," , Mean = ",round(mean(heart$age),2)," , Median = ",round(median(heart$age),2),sep = ""))
+```
+
+With a skewness of -0.16, and the mean value of age being close to the median, This looks like a <b>fairly symmetrical Normal Distribution</b>, with a <b>slight Left Skewness.</b> 
+
+From the attribute summary, we know that only the first quartile has patients are aged below 48 years.
+
+We also saw that 50 percent of our observations are aged between 48 and 61 years.
+
+
+
+###2. Gender of Patients
+```{r,echo=F}
+(pie <- heart %>%
+  group_by(sex) %>%
+  summarize(count = n()) %>%
+  plot_ly(labels = c("Female","Male"), values = ~count) %>%
+  add_pie(hole = 0) %>%
+  layout(title = "Gender",  showlegend = T,
+         legend = list(font = list(size=20)),
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)))
+```
+
+Female patients being diagnosed for Heart Disease are roughly half of the number of male patients.
+
+
+###3.  Chest Pain Type
+```{r,echo=F}
+(pie <- heart %>%
+  group_by(CPType) %>%
+  summarize(count = n()) %>%
+  plot_ly(labels = c("Typical","Atypical","Non-Anginal", "Asymptomatic" ), values = ~count) %>%
+  add_pie(hole = 0) %>%
+  layout(title = "Chest Pain",  showlegend = T,
+         legend = list(font = list(size=20)),
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)))
+```
+
+The most common chest pain, reported by 47.8 percent patients is Asymtomatic, which technically isn't even a common chest pain unlike Typical and Atypical Angina, reported by 7.4 and 15.6 percent of patients respectively. Interestingly enough, the remaining 30 percent patients report Non-Anginal pain, which means the pain that isn't experienced in the chest. While usually we connect chest pain with Heart diseases, this presents a rather new perspective to the types of pains reported by the patients in our sample.  
+
+###4.  Resting blood pressure
+```{r,echo=F}
+ggplot(heart,aes(restBP))+geom_histogram(binwidth = 10,fill="steelblue",color="black")+theme_minimal()+xlab("Resting Blood Pressure (measured in mm Hg)")+ylab("Count")+theme(axis.line = element_line(color = "black",size = 1, linetype = "solid"))+ggtitle(paste("Skewness =",round(skewness(heart$restBP),2),sep = " "))+scale_x_continuous(breaks=seq(70,220,by=10))+scale_y_continuous(breaks=seq(0,70,by=10))
+```
+
+With a skewness value of +0.71, The distribution is <b>skewed towards the right</b>. 
+
+From the attribute summary, we know that <b>75 percent of the patients have a resting blood pressure below 140 mm Hg</b>, which comes under normal to high-normal range, and can be seen from the histogram.
+
+Whereas the remaining <b>25 percent of the patients have considerably high resting Blood Pressure.</b>
+
+According to doctors, Blood pressure that's high over a long time is one of the main risk factors for heart disease, and we shall look further into this in the bi-variate analysis.
+
+###5.  Cholesterol
+```{r,echo=F}
+ggplot(heart,aes(cholesterol))+geom_histogram(binwidth =20,fill="steelblue",color="black")+theme_minimal()+xlab("Cholesterol Measured in mg/dL ")+ylab("Count")+theme(axis.line = element_line(color = "black", size = 1, linetype = "solid"))+
+  ggtitle(paste("Skewness = ",round(skewness(heart$cholesterol),2)," , Mean = ",round(mean(heart$cholesterol),2)," , Median = ",round(median(heart$cholesterol),2),sep = ""))+scale_y_continuous(breaks=seq(0,50,by=10))+scale_x_continuous(breaks=seq(100,580,by=20))
+```
+
+Although the calculated skewness value is +1.17 which is very high, the distribution looks <b>fairly symmetrical around the median with a handful of outliers.(cholesterol >=400mg/dL)</b>
+
+From our attribute description, normal cholesterol level for adults should be less than 200 mg/dL. And from our summary, only 25 percent of our sample has Cholesterol less than 213 mg/dL. All the remaining 75 percent (200 out of 270) have high cholesterol. <b>Hence, this may not be a good criteria for classifying patients for heart disease, as mostly every patient has high cholesterol.</b> Still, we'll further look into its significance in our bi-variate analysis. 
+
+###6.  Fasting blood sugar
+```{r,echo=F}
+(pie <- heart %>%
+  group_by(fastingBS_g120) %>%
+  summarize(count = n()) %>%
+  plot_ly(labels = c("No","Yes"), values = ~count) %>%
+  add_pie(hole = 0) %>%
+  layout(title = "Is Fasting blood sugar > 120",  showlegend = T,
+         legend = list(font = list(size=20)),
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)))
+```
+
+This is good, only 14.8 percent of the patients have a fasting blood sugar greater than 120 mg/dL, whereas the remaining 85.2 percent have fasting blood sugar lower than 120 mg/dL.
+
+###7.  Resting ECG Results
+```{r,echo=F}
+(pie <- heart %>%
+  group_by(restECG) %>%
+  summarize(count = n()) %>%
+  plot_ly(labels = c("Normal","ST-T Wave Abnormality","Left Ventricular hypertrophy"), values = ~count) %>%
+  add_pie(hole = 0) %>%
+  layout(title = "Resting ECG Results",  showlegend = T,
+         legend = list(font = list(size=15)),
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)))
+```
+
+The ECG results of all the patients show that <b>50 percent of the patients have Left ventricular hypertrophy</b>, which is enlargement and thickening of the walls of your heart's main pumping chamber (left ventricle). Whereas 48.5 percent of patients got normal ECG results and 0.7 percent (2 patients) reported ST wave abnormality. 
+
+###8.  Maximum Heart Rate Achieved during exercise
+```{r,echo=F}
+ggplot(heart,aes(maxHR))+geom_histogram(binwidth=10,fill="steelblue",color="black")+
+  theme_minimal()+
+  xlab("Heart Rate (measured in Beats per minute)")+
+  ylab("Count")+
+  theme(axis.line = element_line(color = "black", size = 1, linetype = "solid"))+
+  ggtitle(paste("Skewness =",round(skewness(heart$maxHR),2),sep = " "))+
+  geom_vline(aes(xintercept = mean(maxHR, na.rm = T)),
+             colour = "red", linetype ="longdash", size = .8,)+
+  ggtitle(paste("Skewness = ",round(skewness(heart$maxHR),2)," , Mean = ",round(mean(heart$maxHR),2)," , Median = ",round(median(heart$maxHR),2),sep = ""))+
+  scale_x_continuous(breaks = seq(70,220,by=10))
+```
+
+With the skewness value of -0.52, their is a <b>moderate left skewness</b> in distribution of maximum heart rate achieved during exercise.
+
+<b>The spread of the first quartile(71-133 BPM) alone is equal to the conbined spread of the remaining 75 percent of the data.</b>
+
+###9.  Exercise induced angina
+```{r echo=FALSE}
+(pie <- heart %>%
+  group_by(ExIndAngina) %>%
+  summarize(count = n()) %>%
+  plot_ly(labels = c("No","Yes"), values = ~count) %>%
+  add_pie(hole = 0) %>%
+  layout(title = "Exercise Induced Angina",  showlegend = T,
+         legend = list(font = list(size=20)),
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)))
+```
+
+67 percent of patients didn't experience any chest pain during exercise, whereas 33 percent did. This maybe due to the weaker heart condition of the latter or some other underlying factors.
+
+###10. ST depression induced by Exercise (relative to rest measurement
+```{r,echo=F}
+ggplot(heart,aes(oldPeak))+
+  geom_histogram(binwidth=0.2,fill="steelblue",color="black")+
+  theme_minimal()+xlab("ST depression Ratio")+ylab("Count")+
+  theme(axis.line = element_line(color = "black", size = 1, linetype = "solid"))+
+  ggtitle(paste("Skewness = ",round(skewness(heart$oldPeak),2)," , Mean = ",round(mean(heart$oldPeak),2)," , Median = ",round(median(heart$oldPeak),2),sep = ""))
+  
+```
+
+With the Skewness of +1.25, their is a considerable right skewness, and the distribution of ST Depression Ratio is far from symmetrical.
+
+The value of ST depression ratio coming out to be zero for a lot of patients means that <b>there wasn't a considerable difference in the ST segment of patients prior and after the exercise.</b> Whereas, there are still a lot of patients who had a significant change in their ST segment after exercise.
+
+
+###11. SlopePEST
+```{r,echo=F}
+(pie <- heart %>%
+  group_by(slopePEST) %>%
+  summarize(count = n()) %>%
+  plot_ly(labels = c("Upsloping","Flat","Downsloping"), values = ~count) %>%
+  add_pie(hole = 0) %>%
+  layout(title = "Slope of Peak Exercise ST Segment",  showlegend = T,
+         legend = list(font = list(size=20)),
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)))
+```
+
+The most common slope of peak exercise ST segment is Upwards, reported by 48.1 percent patients, whereas 45.2 percent patients had a flat ST segment during exercise. The remaining 6.6 percent of patients had a downwards slope in their ST segment.
+
+###12. nVessels
+```{r,echo=F}
+(pie <- heart %>%
+  group_by(nVessels) %>%
+  summarize(count = n()) %>%
+  plot_ly(labels = c("0","1","2","3"), values = ~count) %>%
+  add_pie(hole = 0) %>%
+  layout(title = "Number of Major Vessels Colored by Flouroscopy",  showlegend = T,
+         legend = list(font = list(size=20)),
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)))
+```
+
+59.3 percent patients had no major vessels colored during flouroscopy. Whereas 21.5 patients showed coloration in one major blood vessel. While 12.2 percent and 7 percent patients showed coloration in two and three major blood vessels respectively during flouroscopy.
+
+<b>This shows that a majority of patients (around 80 percent) had either no blockages in their major heart vessels, or had blockage in one major heart vessel. </b>
+
+###13. Thallium Stress Test
+```{r,echo=F}
+(pie <- heart %>%
+  group_by(thalD) %>%
+  summarize(count = n()) %>%
+  plot_ly(labels = c("Normal","Fixed Defect","Reversible Defect"), values = ~count) %>%
+  add_pie(hole = 0) %>%
+  layout(title = "Thallium Stress Test Results",  showlegend = T,
+         legend = list(font = list(size=20)),
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)))
+```
+
+56.3 percent of patients had normal Thallium stress test reports, meaning that these patients had normal blood flow to the heart during exercise.
+
+Whereas 38.5 percent of the patients showed reversible defects in blood flow, i.e. which restored back to normal with rest.
+
+While 5.2 percent patients either had fixed defects or developed fixed defects in blood flow to the heart after the Thallium Stress Test.
+
+<a href="#Index">Back to Table of Contents</a>
+
+<a id="Univariate_Summary"></a>
+
+###Summary of Univariate Analysis
+Let us jort down the most significant points we came across in our univariate analysis, which are:
+
+<ul>
+<li>Patients undergoing diagnosis of Heart Disease are more likely to be 48 years or older.</li>
+<li>A majority of the patients (75 percent, or 200 out of the total 270) have <b>high cholesterol.</b></li>
+<li>Only a minority (14.8 percent, or 40 out of the total 270) of the patients have high blood sugar.</li>
+<li>Only 2 patients have ST-T wave abnormality in thier ECG results, whereas the remaining patients have either Left Ventricular Hypertrophy or have Normal reports (50 percent each).</li>
+<li>Maximum heart rate achieved during exercise is correlated to the Age attribute in our dataset. We will look into this in our multivariate analysis.</li>
+<li>ST depression induced by Exercise (OldPeak) attribute was quite unwieldy, since the ratio doesn't give an insight as to what might be the reason for so many patients having no change in the ratio, and how is it related to the Slope of the peak exercise ST segment. We will look into this in our multivariate analysis.</li>
+<li>A majority of patients (around 80 percent) had either no blockages in their major heart vessels, or had a blockage in one major heart vessel during rest. The case could be different under stress.</li>
+<li>Around 40 percent of patients showed <b>reversible defects</b> and 5 percent showed fixed defects in the blood flow during Thallium stress test, which might be due to the partial blockage of the blood vessels. It might be the case that the blockage shows its effects only when the patient is stressed and needs more blood to be pumped from the heart. </li>
+</ul>
+
+<a href="#Index">Back to Table of Contents</a>
+
+<a id="Bivariate"></a>
+
+##Bivariate Analysis
+
+With the summary of univariate analysis ready, let us now focus on our target variable (Heart Disease) and see how our attributes are able to explain it.    
+
+
+
+###1. Gender wise distribution of Heart Disease
+```{r,echo=F}
+library(dplyr)
+library(ggplot2)
+GenderBi<-heart %>% group_by(sex,HeartDisease) %>% summarise(count = n()) 
+GenderBi<-GenderBi %>% group_by(sex) %>% mutate(prop=paste(round((count/sum(count))*100),"%",sep = ""))
+ggplot(GenderBi,aes(x=sex,y=count,fill=HeartDisease))+
+    geom_bar(stat="identity",position = "dodge")+
+    theme_minimal()+
+    theme(axis.line = element_line(color = "black", size = 1, linetype = "solid"))+
+    scale_fill_manual(values=c( "aquamarine2","steelblue"))+
+    xlab("Gender")+
+    ylab("Count")+geom_text(aes(label =GenderBi$prop),vjust=-0.7,size=4,stat = "identity",position = position_dodge(width = 0.9))
+    #ggtitle("Gender wise distribution of Heart Disease")
+
+
+```
+
+
+55 percent of the men in our sample have heart disease, which is far greater than the 23 percent of the females having heart disease. This seems to indicate that the gender of the patient is related to the Heart Disease, so let's confirm that with a Hypothesis test:
+
+####<b>Is Gender of a patient related to Heart Disease?</b>
+
+Let us test this using a Hypothesis Test, with a significance level of 0.05
+
+<ul>
+<li><b>Null Hypothesis, H0:</b> Males and Females are equally likely to have heart disease.</li>  
+<li><b>Alternate Hypothesis, H1:</b> Males are more likely to have heart disease.</li>
+</ul>
+```{r,echo=FALSE}
+chisq.test(heart$sex,heart$HeartDisease)
+```
+Indeed, Males are more likely to have heart disease, and our null hypothesis can by rejected, with a p-value which is much less than our significance level of 0.05
+
+###2. Analysis of Age according to presence or absence of Heart Disease.
+
+```{r,echo=FALSE}
+HDsub<-median((heart %>% filter(HeartDisease=="Yes"))$age)
+nHDsub<-median((heart %>% filter(HeartDisease=="No"))$age)
+ggplot(heart,aes(y=age,x=HeartDisease))+geom_boxplot(fill="steelblue")+theme_minimal()+theme(axis.line = element_line(color = "black",size = 1, linetype = "solid"))+xlab("Heart Disease")+ylab("Age")+ggtitle(paste("Median age of patients not having heart disease = ",nHDsub,"\nMedian age of patients having heart disease = ",HDsub))
+```
+
+The age distribution of patients having heart disease seems to be different than the patients not having heart disease, so let's confirm that with a Hypothesis test:
+
+
+####<b>Does old age make you more susceptible to Heart Disease?</b>
+Let us test this using a Hypothesis Test, with a significance level of 0.05
+
+<ul>
+<li><b>Null Hypothesis, H0:</b> The average age of patients with heart disease is similar to that of patients without heart disease.</li>  
+<li><b>Alternate Hypothesis, H1:</b> The average age of patients with heart disease is higher than that of patients without heart disease.</li>
+</ul>
+
+```{r,echo=F}
+age_HeartDisease<-(heart %>% filter(HeartDisease=="Yes"))$age
+age_NoHeartDisease<-(heart %>% filter(HeartDisease=="No"))$age
+t.test(age_HeartDisease,age_NoHeartDisease,alternative = "greater",paired = F,var.equal = T)
+```
+
+Indeed, the average age of patients with heart disease is higher than that of patients without heart disease, and our null hypothesis can by rejected, with a p value of 0.0002 which is much less than our significance level of 0.05
+
+<b>Older patients are much more likely to be diagnosed positive for heart disease, afterall our heart is a muscle too, and with age it becomes weaker.</b>
+
+
+###3.  Analysis of Chest Pain based on presence of Heart Disease 
+```{r,echo=F}
+library(dplyr)
+CPBi<-heart %>% group_by(CPType,HeartDisease) %>% summarise(count = n()) 
+CPBi<-CPBi %>% group_by(CPType) %>% mutate(prop=paste(round((count/sum(count))*100),"%",sep = ""))
+ggplot(CPBi,aes(x=CPType,y=count,fill=HeartDisease))+
+    geom_bar(stat="identity",position = "dodge")+
+    theme_minimal()+
+    theme(axis.line = element_line(color = "black", size = 1, linetype = "solid"))+
+    scale_fill_manual(values=c( "aquamarine2","steelblue"))+
+    xlab("Chest Pain Type")+
+    ylab("Count")+geom_text(aes(label =CPBi$prop),vjust=-0.7,size=4,stat = "identity",position = position_dodge(width = 0.9))
+    
+
+```
+
+71 percent patients having asymptomatic chest pain had a heart disease. <b>This is concerning because many heart diseases do not display any symptoms until it crosses some threshold, at which point the symptoms become immediately evident, and therefore are called asymptomatic.</b> 
+
+Although we can prove with a hypothesis test that the type of chest pain is significantly related to Heart Disease, We don't have any further information about the causes and signs of the asymptomatic category, so while it would help our model to classify heart disease, there would be no real world intuition behind this value of the Chest Pain attribute. 
+
+On the other hand, Typical chest pain, which can be easily diagnosed even by a non-speacialist, was a characteristic of 25 percent of the patients having heart disease. So, it shouldn't be taken lightly either.
+
+####<b>Are the types of Chest pain significantly related to presence of heart Disease?</b>
+
+<ul>
+<li><b>Null Hypothesis, H0:</b> All kinds of chest pains are equally likely to be accompanied by an underlying heart disease.</li>  
+<li><b>Alternate Hypothesis, H1:</b> All kinds of chest pains are not equally likely to be accompanied by an underlying heart disease.</li>
+</ul>
+We will use a T-test for this with a significance value of 0.05
+```{r,echo=F}
+chisq.test(heart$CPType,heart$HeartDisease)
+```
+
+Indeed, Some types of chest pain are more likely to be accompanied by an underlying heart disease, and our null hypothesis can by rejected, with a p-value which is much less than our significance level of 0.05. 
+
+Although we proved with a hypothesis test that the type of chest pain is significantly related to Heart Disease, We don't have any further information about the causes and signs of the asymptomatic category, so <b>while it would help our model to classify heart disease, there would be no real world intuition behind this value of the Chest Pain attribute.</b> 
+
+###4.  Resting blood pressure based on presence of Heart Disease
+```{r,echo=F}
+HDsub<-round(mean((heart %>% filter(HeartDisease=="Yes"))$restBP),1)
+nHDsub<-round(mean((heart %>% filter(HeartDisease=="No"))$restBP),1)
+
+ggplot(heart,aes(y=restBP,x=HeartDisease))+geom_boxplot(fill="steelblue")+theme_minimal()+theme(axis.line = element_line(color = "black",size = 1, linetype = "solid"))+xlab("Heart Disease")+ylab("Resting Blood Pressure (measured in mm Hg)")+ ggtitle(paste("Mean Blood Pressure of patients not having heart disease = ",nHDsub,"\nMean Blood Pressure of patients having heart disease = ",HDsub))+
+  scale_y_continuous(breaks = seq(90,200,by=10))
+```
+
+While the median value of the resting blood pressure is similar for patients with and without Heart Disease, there is a considerable spread in the values for the latter towards higher values. Let us confirm that with a Hypothesis test.
+
+####<b>Do patients with Heart disease generally have Higher Blood Pressure?</b>
+
+<ul>
+<li><b>Null Hypothesis, H0:</b> The average Resting Blood Pressure of patients with heart disease is similar to that of patients without heart disease.</li>  
+<li><b>Alternate Hypothesis, H1:</b> The average Resting Blood Pressure of patients with heart disease is higher than that of patients without heart disease.</li>
+</ul>
+We will use a T-test for this with a significance value of 0.05
+```{r,echo=F}
+BP1<-(heart %>% filter(HeartDisease=="Yes"))$restBP
+BP2<-(heart %>% filter(HeartDisease=="No"))$restBP
+t.test(BP1,BP2,alternative = "greater",paired = F,var.equal = T)
+```
+
+Indeed, the average Resting Blood Pressure of patients with heart disease is higher than that of patients without heart disease, and our null hypothesis can by rejected, with a p value of 0.005 which is much less than our significance level.
+
+Patients with heart diease have weaker hearts due to the fact that <b>the heart has to work harder even during rest because of the blockages in blood vessels, and there's more pressure on our arteries. </b> Higher resting blood pressure, thus should not be taken lightly. 
+
+###5.  Analysis of Cholesterol levels based on presence of Heart Disease
+```{r,echo=F}
+ggplot(heart,aes(y=cholesterol,x=HeartDisease))+geom_boxplot(fill="steelblue")+theme_minimal()+theme(axis.line = element_line(color = "black",size = 1, linetype = "solid"))+xlab("Heart Disease")+ylab("Cholesterol level (measured in mg/dL)")
+```
+
+From our univariate analysis, we concluded that a majority of the patients (75 percent, or 200 out of the total 270) have high cholesterol, and the box-plot depicts similar distributions of cholesterol levels in patients with and without Heart Disease. 
+
+There doesn't seem to be significant difference between the two groups, but let's confirm that with a Hypothesis test: 
+
+####<b>Do patients with Heart disease generally have Higher cholesterol?</b>
+
+<ul>
+<li><b>Null Hypothesis, H0:</b> The average cholesterol level of patients with heart disease is similar to that of patients without heart disease.</li>  
+<li><b>Alternate Hypothesis, H1:</b> The average cholesterol level of patients with heart disease is higher than that of patients without heart disease.</li>
+</ul>
+We will use a T-test for this with a significance value of 0.05
+```{r,echo=F}
+Ch1<-(heart %>% filter(HeartDisease=="Yes"))$cholesterol
+Ch2<-(heart %>% filter(HeartDisease=="No"))$cholesterol
+t.test(Ch1,Ch2,alternative = "two.sided",paired = F,var.equal = T)
+```
+
+Indeed, the average cholesterol level of patients with heart disease is similar to that of patients without heart disease, and our alternate hypothesis can by rejected, with a p-value of 0.052 which is greater than our significance level.
+
+This depicts that <b>the average cholesterol levels in all the patients is higher than the normal levels</b>, which may be due to repeated intake of fast food containing generous amounts of oil and the lack of exercise to reduce it. <b>This is concerning because people are not taking healthy, nutritious diets that could help keep their cholesterol levels in check.</b> 
+
+###6.  Analysis of Fasting blood sugar based on presence of Heart Disease
+```{r,echo=F}
+library(dplyr)
+BSBi<-heart %>% group_by(fastingBS_g120,HeartDisease) %>% summarise(count = n()) 
+BSBi<-BSBi %>% group_by(fastingBS_g120) %>% mutate(prop=paste(round((count/sum(count))*100),"%",sep = ""))
+ggplot(BSBi,aes(x=fastingBS_g120,y=count,fill=HeartDisease))+
+    geom_bar(stat="identity",position = "dodge")+
+    theme_minimal()+
+    theme(axis.line = element_line(color = "black", size = 1, linetype = "solid"))+
+    scale_fill_manual(values=c( "aquamarine2","steelblue"))+
+    xlab("Fasting blood sugar > 120 mg/dL")+
+    ylab("Count")+geom_text(aes(label =BSBi$prop),vjust=-0.7,size=4,stat = "identity",position = position_dodge(width = 0.9))
+```
+
+From our univariate analysis we found that 85 percent of the patients had a Fasting blood sugar less than 120 mg/dL, and out of those, 45 percent patients have heart disease.
+
+On the other hand, out of all the patients having higher blood sugar than 120 mg/dL, 42 percent had heart disease.
+
+####<b>Is Blood sugar related to Heart Disease?</b>
+
+Let us test this using a Hypothesis Test, with a significance level of 0.05
+
+<ul>
+<li><b>Null Hypothesis, H0:</b> Both, patients with and without high blood sugar are equally likely to have heart disease.</li>  
+<li><b>Alternate Hypothesis, H1:</b> Patients with high blood sugar are more likely to have heart disease.</li>
+</ul>
+```{r,echo=FALSE}
+chisq.test(heart$fastingBS_g120,heart$HeartDisease)
+```
+Patients with and without high blood sugar are equally likely to have heart disease, and our null hypothesis is true, with a p-value of 0.9 which is much higher than our significance level.
+
+
+###7.  Comparing ECG Results with presence of Heart Disease
+```{r,echo=F}
+
+heart1<-heart
+heart1$restECG<-factor(heart1$restECG,levels = c(0,1,2),labels = c("Normal","ST Abnormality","Left Verntricular Hypertrophy"))
+ECGBi<-heart1 %>% group_by(restECG,HeartDisease) %>% summarise(count = n()) 
+ECGBi<-ECGBi %>% group_by(restECG) %>% mutate(prop=paste(round((count/sum(count))*100),"%",sep = ""))
+ggplot(ECGBi,aes(x=restECG,y=count,fill=HeartDisease))+
+    geom_bar(stat="identity",position = "dodge")+
+    theme_minimal()+
+    theme(axis.line = element_line(color = "black", size = 1, linetype = "solid"))+
+    scale_fill_manual(values=c( "aquamarine2","steelblue"))+
+    xlab("Resting ECG Results")+
+    ylab("Count")+geom_text(aes(label =ECGBi$prop),vjust=-0.7,size=4,stat = "identity",position = position_dodge(width = 0.9))
+```
+
+65 percent of patients that had normal ECG results don't actually have a heart disease.
+
+On the other hand, out of all the patients that reported Left ventricular Hypertrophy, 53 percent had heart disease. Whereas, there's a 50 percent chance of having heart disease if there's a ST abnormality in the ECG results.
+
+
+###8. Analysis of Maximum Heart Rate Achieved during exercise based on presence of heart disease
+```{r,echo=F}
+HDsub<-round(mean((heart %>% filter(HeartDisease=="Yes"))$maxHR),1)
+nHDsub<-round(mean((heart %>% filter(HeartDisease=="No"))$maxHR),1)
+
+ggplot(heart,aes(y=maxHR,x=HeartDisease))+geom_boxplot(fill="steelblue")+theme_minimal()+theme(axis.line = element_line(color = "black",size = 1, linetype = "solid"))+xlab("Heart Disease")+ylab("Maximum  Heart Rate achieved during Exercise")+ggtitle(paste("Average H.R. of patients not having heart disease = ",nHDsub,"\nAverage H.R. of patients having heart disease = ",HDsub))+scale_y_continuous(breaks = seq(25,225,by=10))
+```
+
+Now this one is the most interesting attribute by far, as it clearly distinguishes the patients with and without heart disease based on the fact that a healthy person has much higher ability to push his/her cardiovascular system to the extreme levels, whereas a person showing symptoms of Heart Disease simply can't.
+
+This is great because it doesn't require a doctor to conduct tests and tell us that we have a weak heart, rather it can be discovered even by regularly engaging in physical activities and being in touch with our bodies - by not ignoring the subtle signs that our body gives us.
+
+Let's prove this with a hypothesis test:
+
+####<b>Do patients without Heart disease generally have Higher maximum Heart Rate during exercise?</b>
+
+<ul>
+<li><b>Null Hypothesis, H0:</b> The average maximum heart rate of patients with heart disease is similar to that of patients without heart disease.</li>  
+<li><b>Alternate Hypothesis, H1:</b> The average maximum heart rate of patients without heart disease is higher than that of patients with heart disease.</li>
+</ul>
+We will use a T-test for this with a significance value of 0.05
+```{r,echo=F}
+Hr1<-(heart %>% filter(HeartDisease=="Yes"))$maxHR
+Hr2<-(heart %>% filter(HeartDisease=="No"))$maxHR
+t.test(Hr1,Hr2,alternative = "two.sided",paired = F,var.equal = T)
+```
+
+Indeed, patients with healthy hearts are capable of having much higher maximum heart rates as compared to the patients which have heart disease, and our null hypothesis can by rejected, with a p-value that is much lesser than our significance level.
+
+
+###9. Analysis of Exercise induced angina based on presence of heart disease
+```{r,echo=F}
+library(dplyr)
+EIABi<-heart %>% group_by(ExIndAngina,HeartDisease) %>% summarise(count = n()) 
+EIABi<-EIABi %>% group_by(ExIndAngina) %>% mutate(prop=paste(round((count/sum(count))*100),"%",sep = ""))
+ggplot(EIABi,aes(x=ExIndAngina,y=count,fill=HeartDisease))+
+    geom_bar(stat="identity",position = "dodge")+
+    theme_minimal()+
+    theme(axis.line = element_line(color = "black", size = 1, linetype = "solid"))+
+    scale_fill_manual(values=c( "aquamarine2","steelblue"))+
+    xlab("Exercise induced angina")+
+    ylab("Count")+geom_text(aes(label =EIABi$prop),vjust=-0.7,size=4,stat = "identity",position = position_dodge(width = 0.9))
+```
+
+This was foreseeable, as chest pain is one of the most common symptoms of heart disease, and 75 percent of patients experiencing chest pain after exercise actually had heart disease.
+
+Similarly, on the other hand, 70 percent of the patients that didn't feel any chest pain during exercise didn't have any heart disease. Which reinforces the fact that exercise is very crucial to keep our heart healthy. We will further look into it in our multivariate analysis.
+
+###10. Analysis of Oldpeak attribute with presence of heart disease
+```{r,echo=F}
+HDsub<-median((heart %>% filter(HeartDisease=="Yes"))$oldPeak)
+nHDsub<-median((heart %>% filter(HeartDisease=="No"))$oldPeak)
+
+ggplot(heart,aes(y=oldPeak,x=HeartDisease))+geom_boxplot(fill="steelblue")+theme_minimal()+theme(axis.line = element_line(color = "black",size = 1, linetype = "solid"))+xlab("Heart Disease")+ylab("Relative ST Depression Induced during Exercise")+ggtitle(paste("Median Old Peak of patients not having heart disease = ",nHDsub,"\nMedian Old Peak of patients having heart disease = ",HDsub))
+
+
+
+#ggplot(heart,aes(x=oldPeak,fill=HeartDisease))+geom_histogram(bins=10)+theme_minimal()+scale_y_continuous(breaks=seq(0,100,by=10))+xlab("Relative ST Depression Induced")+ylab("Count")+theme(axis.line = element_line(color = "black",size = 1, linetype = "solid"))+scale_x_continuous(breaks = seq(0,8,by=2))
+
+```
+
+The Relative ST Depression induced during Exercise is starting to make sense now, with patients not having heart disease having its value closer to zero, whereas the patients that actually have heart disease have a greater value. Let's confirm it with a hypothesis test:  
+
+####<b>Do patients without Heart disease generally have lower OldPeak values?</b>
+
+<ul>
+<li><b>Null Hypothesis, H0:</b> The average Old Peak value of patients with heart disease is similar to that of patients without heart disease.</li>  
+<li><b>Alternate Hypothesis, H1:</b> The average Old Peak value of patients without heart disease is lower than that of patients with heart disease.</li>
+</ul>
+We will use a T-test for this with a significance value of 0.05
+```{r,echo=F}
+OP1<-(heart %>% filter(HeartDisease=="Yes"))$oldPeak
+OP2<-(heart %>% filter(HeartDisease=="No"))$oldPeak
+t.test(OP1,OP2,alternative = "greater",paired = F,var.equal = T)
+```
+
+Indeed, patients with healthy hearts have much lower induced ST Depression during exercise as compared to the patients which have heart disease, and our null hypothesis can by rejected, with a p-value that is much lesser than our significance level.
+
+###11. Analysis of Peak Exercise ST Segment with presence of Heart Disease
+```{r,echo=F}
+library(dplyr)
+SLBi<-heart %>% group_by(slopePEST,HeartDisease) %>% summarise(count = n()) 
+SLBi<-SLBi %>% group_by(slopePEST) %>% mutate(prop=paste(round((count/sum(count))*100),"%",sep = ""))
+ggplot(SLBi,aes(x=slopePEST,y=count,fill=HeartDisease))+
+    geom_bar(stat="identity",position = "dodge")+
+    theme_minimal()+
+    theme(axis.line = element_line(color = "black", size = 1, linetype = "solid"))+
+    scale_fill_manual(values=c( "aquamarine2","steelblue"))+
+    xlab("Slope of Peak Excersise ST segment")+
+    ylab("Count")+geom_text(aes(label =SLBi$prop),vjust=-0.7,size=4,stat = "identity",position = position_dodge(width = 0.9))
+```
+
+75 percent of patients having upward slope in Peak Exercise ST Segment don't actually have a heart disease.
+
+On the other hand, out of all the patients that had a flat slope in Peak Exercise ST Segment, 64 percent had heart disease. Whereas, 56 percent of patients having a downward slope in Peak Exercise ST Segment have a heart disease.
+
+###12. Analysis of Flouroscopy results with presence of Heart disease
+```{r,echo=F}
+
+NVBi<-heart %>% group_by(nVessels,HeartDisease) %>% summarise(count = n()) 
+NVBi<-NVBi %>% group_by(nVessels) %>% mutate(prop=paste(round((count/sum(count))*100),"%",sep = ""))
+ggplot(NVBi,aes(x=nVessels,y=count,fill=HeartDisease))+
+    geom_bar(stat="identity",position = "dodge")+
+    theme_minimal()+
+    theme(axis.line = element_line(color = "black", size = 1, linetype = "solid"))+
+    scale_fill_manual(values=c( "aquamarine2","steelblue"))+
+    xlab("Number of Major Vessels Colored")+
+    ylab("Count")+geom_text(aes(label =NVBi$prop),vjust=-0.7,size=4,stat = "identity",position = position_dodge(width = 0.9))
+```
+
+75 percent of patients having no major vessels colored during flouroscopy don't actually have a heart disease.
+
+On the other hand, out of all the patients that had 1 major vessel colored, 66 percent had heart disease,
+while 79 percent of patients that had 2 major vessels colored had heart disease, and 84 percent of patients that had 3 major vessels colored had heart disease.
+
+###13. Analysis of Thallium Stress test with presence of Heart Disease
+```{r,echo=F}
+
+THBi<-heart %>% group_by(thalD,HeartDisease) %>% summarise(count = n()) 
+THBi<-THBi %>% group_by(thalD) %>% mutate(prop=paste(round((count/sum(count))*100),"%",sep = ""))
+ggplot(THBi,aes(x=thalD,y=count,fill=HeartDisease))+
+    geom_bar(stat="identity",position = "dodge")+
+    theme_minimal()+
+    theme(axis.line = element_line(color = "black", size = 1, linetype = "solid"))+
+    scale_fill_manual(values=c( "aquamarine2","steelblue"))+
+    xlab("Thallium Stress Test Defect")+
+    ylab("Count")+geom_text(aes(label =THBi$prop),vjust=-0.7,size=4,stat = "identity",position = position_dodge(width = 0.9))
+```
+
+78 percent of patients having normal Thallium Stress test results don't actually have a heart disease, which depicts the accuracy of the Thallium Stress test.
+
+On the other hand, out of all the patients that reported reversible defects in blood flow during the test, 76 percent had heart disease.
+
+Whereas, there's a 57 percent of patients had heart disease if they reported fixed defects in blood flow during the test.
+
+<a href="#Index">Back to Table of Contents</a>
+
+<a id="Bivariate_Summary"></a>
+
+###Summary of Bivariate Analysis
+Let us now jort down the most significant points we came across in our bivariate analysis, which are:
+
+<ul>
+<li>Older patients are much more likely to be diagnosed positive for heart disease, afterall our heart is a muscle too, and with age, it starts to become weaker and weaker, which is true for both men and women.</li>
+<li>71 percent of the patients reporting asymptomatic chest pain have a heart disease. This is concerning because many heart diseases do not display many symptoms until it crosses some threshold, at which point the symptoms become immediately evident and it is too late.</li>
+<li>Patients with heart diease have weaker hearts due to the fact that the heart has to work harder even during rest because of the partial blockages in blood vessels. Higher resting blood pressure, thus should not be taken lightly.</li>
+<li>The average cholesterol levels in all the patients is higher than the normal levels, which may be due to repeated intake of fast food containing generous amounts of oil and the lack of exercise to reduce it. This is concerning because people are not taking healthy, nutritious diets that could help keep their cholesterol levels in check.</li>
+<li>A healthy person has much higher ability to push his/her cardiovascular system to the extreme levels, whereas a person showing symptoms of Heart Disease simply can't. Like other muscles of our body, we need to focus on our heart and immediately consult the doctor in case of any discomfort during exercise.</li>
+<li>Patients with healthy hearts have much lower induced ST Depression during exercise, as compared to the patients which have heart disease.</li>
+</ul>
+
+<a href="#Index">Back to Table of Contents</a>
+
+<a id="Multivariate"></a>
+
+##Multivariate Analysis
+Let's look at our attributes one last time, and try to study the contributing factors to heart disease in multivariate analysis of the data.
+
+Our dataset has 9 categorical varaibles, and 5 continuous variables. The correlation matrix of the latter is as follows:
+
+```{r,,echo=F,warning=F,message=F}
+num_var <- c(1,4,5,8,10) 
+corrplot(cor(heart[,num_var]),method ="number")
+```
+
+The attributes in our dataset have low to medium correlation, with the most prominently correlated attributes being:
+<ul>
+<li>A moderate negative correlation of -0.40 between Age and Maximum Heart rate.</li> 
+<li>A moderate negative correlation of -0.35 between Maximum heart rate and OldPeak.</li>
+</ul>
+
+Also, The most significant attributes that we came across in our univariate and bivariate analysis were:
+<ul>
+<li>Age of the Patient.</li>
+<li>Maximum Heart Rate during Exercise.</li>
+<li>Thallium Stress Test Results.</li>
+<li>Relative ST Depression induced during Exercise.</li>
+</ul>
+
+We will now plot the target variable(Presence/Absence of heart disease) along with the above four attributes.
+
+####1. Age, MaxHR, Thallium Test results, Target Variable
+
+```{r,echo=F}
+heart1<-heart
+heart1$thalD <- factor(heart$thalD,levels=c("normal","fixed","reversible"),c("Normal","Fixed defect","Reversible defect"))
+ggplot(heart1,aes(x=age,y=maxHR,color=HeartDisease))+geom_point()+theme_minimal()+theme(axis.line = element_line(color = "black",size = 1, linetype = "solid"))+xlab("Age (in years)")+ylab("Maximum Heart Rate achieved during Exercise (Bpm)")+facet_grid(rows = vars(thalD))
+```
+
+Key-
+<ul>
+<li><b>x axis:</b> Age of the patient</li>
+<li><b>y axis:</b> Maximum Heart Rate achieved during Exercise (Bpm)</li>
+<li><b>Faceting:</b> Thallium Stress Test results(Normal/Fixed Defect/Reversible Defect)</li>
+<li><b>Color:</b> Heart Disease (Yes/No)</li>
+</ul>
+
+Healthy patients (that don't have heart disease and also had normal reports in Thallium Stress Test) show a <b>moderate downhill relationship</b> between the <b>Maximum Heart Rate</b> and <b>Age</b>, with patients generally having higher  Maximum Heart Rates because their hearts are capable of being pushed to the extreme. They seem to follow the general rule of thumb given by doctors:
+
+<b>Maximum Heart Rate = 220 - Age</b>
+
+Whereas no such relationship can be seen for Patients with Heart Disease. 
+
+Although this can't be seen as a reason for having Heart Disease, but is a pretty good sign for detecting possible Heart risks. <b>People that engage in physical exercise on a regular basis would be better able to detect whether their heart is functioning properly or not. </b> And early diagnosis translates to better chances of survival.
+
+####2. Age, OldPeak, Thallium Test results, Target Variable
+
+```{r,echo=F}
+ggplot(heart1,aes(x=age,y=oldPeak,color=HeartDisease))+geom_point()+theme_minimal()+theme(axis.line = element_line(color = "black",size = 1, linetype = "solid"))+xlab("Age (in years)")+ylab("Relative ST Depression Induced during Exercise")+facet_grid(rows = vars(thalD))
+```
+
+Key-
+<ul>
+<li><b>x axis:</b> Age of the patient</li>
+<li><b>y axis:</b> OldPeak (Relative ST Depression Induced during Exercise)</li>
+<li><b>Faceting:</b> Thallium Stress Test results(Normal/Fixed Defect/Reversible Defect)</li>
+<li><b>Color:</b> Heart Disease (Yes/No)</li>
+</ul>
+
+Healthy patients (that don't have heart disease) generally have no change in their ST Depression before and after Exercise, and even if they do, it is much less than that of patients having heart disease.
+
+When combined with the Thallium stress test results, patients with  higher OldPeak ratio and reversible defects generally have heart disease. This too, although doesn't seem to be a reason for causing Heart Disease, but rather as a detection measure. <b>With fitness trackers capable of monitoring ECG, a person can be alerted in case of sudden change in his/her ST depression and immediately get himself/herself diagnosed.</b> And as always, early diagnosis translates to better chances of survival.
+
+<a href="#Index">Back to Table of Contents</a>
+
+<a id="Conclusion"></a>
+
+##Conclusion
+Summing up our Exploratory Data analysis, we conclude on the following points:
+
+<ul>
+
+<li>Although cholesterol doesn't seem to be good indicator of Heart Disease in our dataset, <b>almost every patient has high cholesterol</b>. It is concerning that how it can be the underlying cause of most heart diseases, because reversible defects in Thallium Stress test indicate that, flouroscopy results indicate that, and even Exercise induced Angina indicate that there's something that goes wrong during exercise. Cholesterol sticks to the inside walls of our arteries and makes them thinner, which in turn makes our heart work even harder during exercise, and hence reducing it's lifespan.  </li>
+
+<li>It goes without saying, but people that engage in physical exercise on a regular basis would be better able to detect whether their heart is functioning properly or not, because even if we ignore the asymptomatic type pain, that we don't have any chance of detecting, the other categories of chest pain can still be identified by a person with a basic knowledge about heart disease symptoms. <b>Early diagnosis goes a long way in saving a patient's life.</b></li>
+
+<li><b>Thallium stress test proves to be very accurate in predicting heart disease</b>, but it involves injecting a radioactive substance to the patient's body, and relatively costly equipment to detect it. This makes it unavailable to a large population.</li>
+
+<li>And finally, the Relative ST Depression Induced during Exercise, which is another good indicator of Heart Disease, relies on exercise, and a relative measure of ECG takes in account the condition of heart in rest and exercise. So, unless a patient uses their heart to it's potential by exercising, there's a very less chance of detecting heart disease.  </li>
+</ul>
+
+<a href="#Index">Back to Table of Contents</a>
+
+#Predictive Modelling
+
+####Feature Scaling
+```{r}
+heart_scaled<- heart
+heart_scaled$age <- ( scale(heart[1] ))
+heart_scaled$restBP <- ( scale(heart[4] ))
+heart_scaled$cholesterol <- ( scale(heart[5] ))
+heart_scaled$maxHR <- ( scale(heart[8] ))
+heart_scaled$oldPeak <- ( scale(heart[10] ))
+
+View(heart_scaled)
+```
+
+
+####Splitting the data
+```{r}
+sample_size <- floor(0.7*nrow(heart_scaled))
+set.seed(500)
+train_ind <- sample(seq_len(nrow(heart_scaled)),size = sample_size)
+train_set <- heart_scaled[train_ind,]
+test_set <- heart_scaled[-train_ind,]
+```
+
+####Checking the number of heart disease patients in each set
+
+```{r}
+#Training Set
+summary(train_set$HeartDisease)
+#Testing Set
+summary(test_set$HeartDisease)
+```
+
+#Logistic Regression
+```{r}
+logistic_full <- glm(HeartDisease ~ ., data=train_set, family="binomial")
+summary(logistic_full)
+```
+
+###Testing the accuracy of Logistic Regression
+####Training Accuracy
+```{r,warning=FALSE}
+logistic_full <- train(HeartDisease ~.,  data=train_set, method="glm", family="binomial")
+pred_train = predict(logistic_full, newdata=train_set)
+confusionMatrix(data=pred_train, train_set$HeartDisease)
+```
+
+####Testing Accuracy
+```{r,warning=FALSE}
+pred = predict(logistic_full, newdata=test_set)
+confusionMatrix(data=pred, test_set$HeartDisease)
+```
+
+
+#PCA
+```{r}
+#Load factoextra for visualization 
+library(factoextra)
+#compute PCA 
+var <- c(1,4,5,8,10)
+heart_pca <- prcomp(train_set[,var], center = TRUE, scale. = TRUE)
+heart_pca 
+
+#summary
+summary(heart_pca) 
+
+#Show the percentage of variances explained by each principle component.
+fviz_eig(heart_pca) 
+
+#Regression Model
+'''
+scoreHouses <- house.pca$x
+modHouses <- lm(train$price~scoreHouses[,1:3]+bedrooms+bathrooms+floors+waterfront+view+condition+grade+yr_renovated+zipcode,data = train) 
+
+summary(modHouses)'''
+
+```
+
+
+
+
