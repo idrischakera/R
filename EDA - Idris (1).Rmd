@@ -13,8 +13,11 @@ output:
 
 ##Table of Contents
 <ul>
+
 <li><a href="#About">About</a></li>
 
+<li><a href="#Structure">Exploratory Data Analysis</a></li>
+<ul>
 <li><a href="#Structure">Structure</a></li>
 
 <li><a href="#Attribute_Description">Attribute Description</a></li>
@@ -32,6 +35,9 @@ output:
 <li><a href="#Multivariate">Multivariate Analysis</a></li>
 
 <li><a href="#Conclusion">Conclusion</a></li>
+</ul>
+<li><a href="#Predictive_modelling">Predictive Modelling</a></li>
+
 </ul>
 
 <a id="About"></a>
@@ -984,6 +990,7 @@ Summing up our Exploratory Data analysis, we conclude on the following points:
 
 <a href="#Index">Back to Table of Contents</a>
 
+<a id="Predictive_modelling"></a>
 #Predictive Modelling
 
 Predictive analytics is an area of statistics that deals with extracting information from data and using it to predict trends and/or behavioral patterns. We are going to use various Machine Learning algorithms in order to predict whether a patient has heart disease or not, based on the predictor variables in our dataset.
@@ -1076,19 +1083,21 @@ confusionMatrix(data=pred_train, train_set$HeartDisease)
 Kappa = (Observed Accuracy - Expected Accuracy) / (1 - Expected Accuracy)</li>
   <li><b>Sensitivity</b> = True Positive Rate (TP/TP+FN) - It says, out of all the positive (majority class) values, how many have been predicted correctly’.</li>
 <li><b>Specificity</b> = True Negative Rate (TN/TN +FP) - It says, out of all the negative (minority class) values, how many have been predicted correctly.</li>
-<li><b>Detection rate</b> is the proportion of the whole sample where the events were detected correctly.</li>
+<li><b>Prevalence</b> is the proportion of a population who have a specific characteristic in a given population. It is calculated as : Prevalence = (TP + TN)/(TP + TN + FP + FN)</li>
+<li><b>Detection rate</b> is the proportion of the whole sample where the events were detected as True positives. Detection Rate = TP /(TP + FP + TN + FN)</li>
 <li><b>Balanced Accuracy</b> takes into account the class imbalance, as it is calculated from sensitivity and specificity, rather than the actual data. It is thus, a better metric than plain accuracy. Balanced Accuracy=(Sensitivity+Specificity)/2.</li>
 </ul>
 ####Testing Accuracy
 ```{r,warning=FALSE,echo=F}
 pred = predict(logistic_full, newdata=test_set)
 confusionMatrix(data=pred, test_set$HeartDisease)
-
-
 ```
 
 
-###2. Using backward propogation for Feature selection
+###2. Using backward Elimination for Feature selection
+
+>Machine Learning isn't all about the algorithms and the mathematics behind it, but it is also equally about the data we’re feeding to the algorithm.
+
 ```{r,echo=F}
 #step(logistic_full,direction="backward",trace = FALSE)
 logistic_back<-glm(formula = HeartDisease ~ sex + CPType + restBP + cholesterol + 
@@ -1096,7 +1105,7 @@ logistic_back<-glm(formula = HeartDisease ~ sex + CPType + restBP + cholesterol 
 summary(logistic_back)
 ```
 
-###Testing the accuracy of Logistic Regression with backward selection 
+
 ####Training Accuracy
 ```{r,echo=F}
 logistic_back <- train(HeartDisease ~ sex + CPType + restBP + cholesterol + 
@@ -1120,7 +1129,7 @@ confusionMatrix(data=pred_test_back, test_set$HeartDisease)
 ###3. Using significant variables
 ```{r,echo=F}
 
-logistic_sig<-glm(formula = HeartDisease ~ sex + CPType + restBP + cholesterol + 
+logistic_sig<-glm(formula = HeartDisease ~ sex + CPType + restBP  + 
      restECG+ ExIndAngina + nVessels+slopePEST, family = "binomial", data = train_set)
 summary(logistic_sig)
 ```
@@ -1128,7 +1137,7 @@ summary(logistic_sig)
 
 ####Training Accuracy
 ```{r,echo=F,message=F,warning=F}
-logistic_sig <- train(HeartDisease ~ sex + CPType + restBP + cholesterol + 
+logistic_sig <- train(HeartDisease ~ sex + CPType + restBP +  
      restECG+ ExIndAngina + nVessels+slopePEST,data=train_set, method="glm", family="binomial")
 
 pred_train_back = predict(logistic_sig,newdata = train_set)
@@ -1147,7 +1156,7 @@ confusionMatrix(data=pred_test_back, test_set$HeartDisease)
 
 ##Comparing all Logistic Regression Models
 ```{r,message=FALSE,echo=FALSE,warning=FALSE}
-LR_Models<-data.frame(Model=c("Using all predictor variables","Using Backward Propogation","Using only the significant features "),Training_Accuracy=c(87.6,85.4,85.6),Testing_Accuracy =c(83.4,77.1,82.1),Sensitivity=c(69.2,58.9,66.6),Specificity=c(97.6,95.2,97.6))
+LR_Models<-data.frame(Model=c("Using all predictor variables","Using Backward Propogation","Using only the significant features "),Training_Accuracy=c(87.6,85.4,83.1),Testing_Accuracy =c(83.4,77.1,82.1),Sensitivity=c(69.2,58.9,66.6),Specificity=c(97.6,95.2,97.6))
 
 DT::datatable(LR_Models, options = list(
   pageLength=4, scrollX='400px'), filter = 'top')
@@ -1168,28 +1177,30 @@ library(partykit)
 ```
 
 ```{r,echo=F}
-model_hd1 <- rpart(train_set$HeartDisease~., data=train_set)
+model_hd1 <- rpart(HeartDisease ~ sex + CPType + restBP  + restECG+ ExIndAngina + nVessels+slopePEST, data=train_set)
 rpart.plot(model_hd1)
 #rpart.rules(model_hd1)
 ```
 
-The above decision tree expains that-
+
+The above decision tree asserts that-
 
 <b>The patient doesn't have heart disease under the following circumstances:</b>
 
-1. When nVessels is 1 or 2 or 3 & CPType is Typical or Non-Anginal  & slopePEST is Up or Down.
+1. When nVessels is 0 & CPType is Typical or Atypical or Non-Anginal.                                               
 
-2.  When nVessels is 0 & maxHR >= 132.  
+2. When nVessels is 0 & CPType is Asymptomatic & ExIndAngina is No.
+
+3. When nVessels is 1 or 2 or 3 & CPType is Typical or Non-Anginal & slopePEST is Up or Down. 
 
 <b>Whereas the patient has heart disease under the following circumstances:</b>
 
-1. When nVessels is 0 & maxHR <  132.
+1. When nVessels is 0 & CPType is Asymptomatic & ExIndAngina is Yes. 
 
-2. When nVessels is 1 or 2 or 3 & CPType is Typical or Non-Anginal &  slopePEST is Flat.
+2. When nVessels is 1 or 2 or 3 & CPType is Typical or Non-Anginal & slopePEST is Flat.
 
 3. When nVessels is 1 or 2 or 3 & CPType is Atypical or Asymptomatic.
 
-###Testing the accuracy of Decision Tree
 ####Training Accuracy
 ```{r,echo=F}
 train_set2<-train_set
@@ -1228,9 +1239,9 @@ Balanced Accuracy is the balance between correctly predicting the Heart disease 
 
 ```{r,message=FALSE,warning=FALSE,echo=F}
 library(randomForest)
-heart_rf=randomForest(HeartDisease ~ . , data = train_set)
+heart_rf=randomForest(HeartDisease ~ sex + CPType + restBP  + restECG+ ExIndAngina + nVessels+slopePEST , data = train_set)
 heart_rf
-heart_rf$importance
+#heart_rf$importance
 ```
 
 Here number of trees are 500 , and on an average, OOB error is about 17% so the accuracy is 83%.
@@ -1240,6 +1251,7 @@ As the forest is built on training data , each tree is tested on the 1/3rd of th
 ###Testing the accuracy of Random Forest
 ```{r,echo=F}
 library(caret)
+
 pred = predict(heart_rf, newdata=test_set)
 confusionMatrix(data=pred, test_set$HeartDisease)
 ```
@@ -1268,21 +1280,17 @@ Balanced Accuracy is the balance between correctly predicting the Heart disease 
 ##Cross Validation Method on Random Forest
 The k-fold cross validation method involves splitting the dataset into k-subsets. For each subset is held out while the model is trained on all other subsets. This process is completed until accuracy is determined for each instance in the dataset, and an overall accuracy estimate is provided. It is a robust method for estimating accuracy. Here we have taken k=5.
 ```{r,echo=F}
-model_cv_rf <- train(HeartDisease~.,data=heart,method="rf",trControl = trainControl(method = "cv",number = 3))
+model_cv_rf <- train(HeartDisease ~ sex + CPType + restBP  + restECG+ ExIndAngina + nVessels+slopePEST,data=heart,method="rf",trControl = trainControl(method = "cv",number = 3))
 model_cv_rf
 ```
 
 
 ##Cross Validation Method on Logistic regression
 The k-fold cross validation method involves splitting the dataset into k-subsets. For each subset is held out while the model is trained on all other subsets. This process is completed until accuracy is determine for each instance in the dataset, and an overall accuracy estimate is provided. It is a robust method for estimating accuracy. Here we have taken k=5.
-```{r,echo=F}
-model_cv_logistic <- train(HeartDisease~.,data=heart,method="glm",family="binomial",trControl = trainControl(method = "cv",number = 5))
-model_cv_logistic
-```
+
 
 ```{r,echo=F}
-model_cv_logistic <- train(HeartDisease ~ sex + CPType + restBP + cholesterol + 
-    maxHR + oldPeak + nVessels,data=heart,method="glm",family="binomial",trControl = trainControl(method = "cv",number = 5))
+model_cv_logistic <- train(HeartDisease ~ sex + CPType + restBP  + restECG+ ExIndAngina + nVessels+slopePEST,data=heart,method="glm",family="binomial",trControl = trainControl(method = "cv",number = 5))
 model_cv_logistic
 ```
 
@@ -1290,14 +1298,14 @@ model_cv_logistic
 ##Cross Validation Method on Decision Trees
 The k-fold cross validation method involves splitting the dataset into k-subsets. For each subset is held out while the model is trained on all other subsets. This process is completed until accuracy is determine for each instance in the dataset, and an overall accuracy estimate is provided. It is a robust method for estimating accuracy. Here we have taken k=5.
 ```{r,echo=F}
-model_cv_dt <- train(HeartDisease~.,data=heart,method="rpart",trControl = trainControl(method = "cv",number = 5))
+model_cv_dt <- train(HeartDisease ~ sex + CPType + restBP  + restECG+ ExIndAngina + nVessels+slopePEST,data=heart,method="rpart",trControl = trainControl(method = "cv",number = 5))
 model_cv_dt
 ```
 
 ##Conclusion of the Predictive Analysis
 
 ```{r,echo=F}
-Models<-data.frame(Model=c("Logistic Regression","Logistic Regression with backward Selection","Decision Tree","Random Forest"),Training_Accuracy=c(87.6,85.4,85.3,83),Testing_Accuracy =c(83.4,77.1,69.8,78.3),Cross_Validation_Acuracy=c(83,78,71.8,82))
+Models<-data.frame(Model=c("Logistic Regression","Decision Tree","Random Forest"),Training_Accuracy=c(83.1,85.3,80.5),Testing_Accuracy =c(82.1,77.4,78.5),Cross_Validation_Acuracy=c(83.3,73.7,80))
 
 DT::datatable(Models, options = list(
   pageLength=4, scrollX='400px'), filter = 'top')
